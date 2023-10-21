@@ -1,0 +1,251 @@
+name: Terraform CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - "main"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  COMMIT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  ENVIRONMENTS: '[ "default", ]' # Define environments here
+  TERRAFORM_VERSION: 1.4.6
+  TERRAFORM_DIR: .
+  TERRAFORM_PLAN_BUCKET: ${{ secrets.TERRAFORM_PLAN_BUCKET }} # GCS bucket to store/ retrieve plan files.
+  GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+  GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+
+jobs:
+  pre-commit-checks:
+    name: Pre-commit checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Terraform min/max versions
+        id: minMax
+        uses: clowdhaus/terraform-min-max@v1.2.7
+
+      - name: Pre-commit Terraform ${{ steps.minMax.outputs.maxVersion }}
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.8.3
+        with:
+          terraform-version: ${{ steps.minMax.outputs.maxVersion }}
+          terraform-docs-version: v0.16.0
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+    outputs:
+      fmtOutcome: ${{ steps.fmt.outcome }}
+      validateOutcome: ${{ steps.validate.outcome }}
+      checkovOutcome: ${{ steps.checkov.outcome }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -list=true -check=true -recursive
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        continue-on-error: true
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        continue-on-error: true
+        run: |
+          terraform validate
+
+      - name: Run Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12.2500.0
+        continue-on-error: true
+        with:
+          quiet: true
+
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: ${{fromJson(env.ENVIRONMENTS)}}
+    outputs:
+      planOutcome: ${{ steps.plan.outcome }}
+      planOutput: ${{ steps.plan.outputs.output }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate to Google Cloud
+        id: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: Set Terraform Workspace
+        id: set-workspace
+        run: |
+          echo "Workspace: ${{ matrix.environment }}"
+
+          terraform workspace new ${{ matrix.environment }}" || terraform workspace select ${{ matrix.environment }}"
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        continue-on-error: true
+        run: terraform init
+
+      - name: Determine Var Files
+        id: varfiles
+        run: |
+          if [ "${{ matrix.environment }}" != "default" ]; then
+            OUTPUT="-var-file=common.tfvars -var-file=${{ matrix.environment }}.tfvars"
+            echo "varfiles=$OUTPUT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Terraform Plan (PR)
+        id: plan-pr
+        if: github.event_name == 'pull_request'
+        run: |
+          terraform plan -out=tfplan-${{ env.COMMIT_HASH }}
+
+      - name: Terraform Plan (Push)
+        id: plan-push
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          gsutil cp gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }} tfplan-${{ env.COMMIT_HASH }} || true
+
+          if [ ! -f tfplan-${{ env.COMMIT_HASH }} ]; then
+            terraform plan -out=tfplan-${{ env.COMMIT_HASH }}
+          fi
+
+      - name: Upload Plan
+        id: upload-plan
+        run: gsutil cp tfplan-${{ env.COMMIT_HASH }} gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }}
+
+  comment-on-pr:
+    needs: [lint, plan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: PR Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fmtOutcome = "${{ needs.lint.outputs.fmtOutcome }}";
+            const validateOutcome = "${{ needs.lint.outputs.validateOutcome }}";
+            const checkovOutcome = "${{ needs.lint.outputs.checkovOutcome }}";
+            const planOutcome = "${{ needs.plan.outputs.planOutcome }}";
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes('Checkov Results'));
+
+            const output = `#### Checkov Results 🛡️: \`${checkovOutcome}\`
+            \n#### Terraform Plan Results 🧪: \`${planOutcome}\`
+            \n#### Terraform Fmt Check Results 🧹: \`${fmtOutcome}\`
+            \n#### Terraform Validate Results 🤖 : \`${validateOutcome}\`
+            `;
+                             
+            if (botComment) {
+              github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output
+              })
+            } else {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            }
+
+  apply:
+    needs: [lint, plan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        environment: ${{fromJson(env.ENVIRONMENTS)}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate to Google Cloud
+        id: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: Set Terraform Workspace
+        id: set-workspace
+        run: |
+          echo "Workspace: ${{ matrix.environment }}"
+
+          terraform workspace new ${{ matrix.environment }}" || terraform workspace select ${{ matrix.environment }}"
+
+      - name: Download Plan
+        id: upload-plan
+        run: gsutil cp tfplan-${{ env.COMMIT_HASH }} gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }}
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          gsutil cp gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }} tfplan-${{ env.COMMIT_HASH }}
+
+          terraform apply "tfplan-${{ env.COMMIT_HASH }}"
