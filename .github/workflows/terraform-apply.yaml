@@ -38,11 +38,10 @@ jobs:
 
   apply:
     needs: get-environments
-    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
-      matrix:
-        environment: ${{ fromJSON(needs.get-environments.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.get-environments.outputs.envs) }}
     permissions:
       contents: read
     steps:
