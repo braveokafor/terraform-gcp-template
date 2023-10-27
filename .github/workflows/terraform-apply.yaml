@@ -1,0 +1,91 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TERRAFORM_ENVIRONMENTS: ${{ secrets.TERRAFORM_ENVIRONMENTS != '' && secrets.TERRAFORM_ENVIRONMENTS || 'default' }} # Define environments here, e.g: "dev,uat,prod"
+  TERRAFORM_VERSION: 1.4.6
+  TERRAFORM_DIR: .
+  TERRAFORM_PLAN_BUCKET: ${{ secrets.TERRAFORM_PLAN_BUCKET }} # GCS bucket to store/ retrieve plan files.
+  GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+  GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+  COMMIT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  get-environments:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.set-envs.outputs.envs }}
+    steps:
+      - id: set-envs
+        run: |
+          OUTPUT=$(echo '${{ env.ENVIRONMENTS }}' | jq -R -c '{include: (split(",") | map({environment: .}))}')
+
+          echo $OUTPUT
+          echo "envs=$OUTPUT" >> $GITHUB_OUTPUT
+
+  apply:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: ${{ fromJSON(needs.get-environments.outputs.matrix) }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate to Google Cloud
+        id: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+        with:
+          version: ">= 440.0.0"
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        continue-on-error: true
+        run: terraform init
+
+      - name: Set Terraform Workspace
+        id: set-workspace
+        run: |
+          echo "Workspace: ${{ matrix.environment }}"
+
+          terraform workspace new ${{ matrix.environment }} || terraform workspace select ${{ matrix.environment }}
+
+      - name: Download Plan
+        id: download-plan
+        run: gcloud storage cp gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/${{ env.COMMIT_HASH }}/${{ matrix.environment }}/tfplan tfplan --quiet
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          terraform apply "tfplan"
