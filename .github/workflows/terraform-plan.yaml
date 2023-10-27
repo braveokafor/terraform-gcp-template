@@ -1,24 +1,26 @@
-name: Terraform CI
+name: Terraform Plan
 
 on:
   workflow_dispatch:
   pull_request:
-  push:
-    branches:
-      - "main"
+    paths:
+      - "**.tf"
+      - "**.tfvars"
 
 permissions:
   contents: read
   id-token: write
 
 env:
-  ENVIRONMENTS: "default" # Define environments here, e.g: "dev,uat,prod"
+  TERRAFORM_ENVIRONMENTS: ${{ secrets.TERRAFORM_ENVIRONMENTS != '' && secrets.TERRAFORM_ENVIRONMENTS || 'default' }} # Define environments here, e.g: "dev,uat,prod"
   TERRAFORM_VERSION: 1.4.6
   TERRAFORM_DIR: .
   TERRAFORM_PLAN_BUCKET: ${{ secrets.TERRAFORM_PLAN_BUCKET }} # GCS bucket to store/ retrieve plan files.
   GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
   GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
-  COMMIT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  PR_NUMBER: ${{ github.event.number }}
+  REPO: ${{ github.repository }}
 
 jobs:
   pre-commit-checks:
@@ -93,7 +95,7 @@ jobs:
     steps:
       - id: set-envs
         run: |
-          OUTPUT=$(echo '${{ env.ENVIRONMENTS }}' | jq -R -c '{include: (split(",") | map({environment: .}))}')
+          OUTPUT=$(echo '${{ env.TERRAFORM_ENVIRONMENTS }}' | jq -R -c '{include: (split(",") | map({environment: .}))}')
 
           echo $OUTPUT
           echo "envs=$OUTPUT" >> $GITHUB_OUTPUT
@@ -105,7 +107,7 @@ jobs:
       matrix: ${{ fromJSON(needs.get-environments.outputs.envs) }}
 
     outputs:
-      planOutcome: ${{ steps.plan-pr.outcome }}
+      planOutcome: ${{ steps.plan.outcome }}
 
     steps:
       - name: Checkout
@@ -118,6 +120,10 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
+
+      - name: Setup Graphviz
+        id: setup-graphviz
+        uses: ts-graphviz/setup-graphviz@v1
 
       - name: Authenticate to Google Cloud
         id: "auth"
@@ -149,33 +155,29 @@ jobs:
         run: |
           if [ "${{ matrix.environment }}" != "default" ]; then
             OUTPUT="-var-file=common.tfvars -var-file=${{ matrix.environment }}.tfvars"
-            echo "varfiles=$OUTPUT" >> $GITHUB_OUTPUT
+            echo "varfiles=$OUTPUT" >> $GITHUB_ENV
           fi
 
-      - name: Terraform Plan (PR)
-        id: plan-pr
-        if: github.event_name == 'pull_request'
+      - name: Terraform Plan
+        id: plan
         run: |
-          terraform plan -out=tfplan-${{ env.COMMIT_HASH }}
+          terraform plan ${{ env.varfiles }} -out=tfplan-${{ env.COMMIT_SHA }}
 
-      - name: Terraform Plan (Push)
-        id: plan-push
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      - name: Generate Plan HTML
+        id: plan-html
         run: |
-          gcloud storage cp gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }} tfplan-${{ env.COMMIT_HASH }} || true
+          chmod +x .github/generate_plan.sh
+          .github/generate_plan.sh tfplan-${{ env.COMMIT_SHA }} ${{ env.PR_NUMBER }} ${{ env.COMMIT_SHA }} ${{ env.REPO }}
 
-          if [ ! -f tfplan-${{ env.COMMIT_HASH }} ]; then
-            terraform plan -out=tfplan-${{ env.COMMIT_HASH }}
-          fi
-
-      - name: Upload Plan
+      - name: Upload Plan Artefacts
         id: upload-plan
-        run: gcloud storage cp tfplan-${{ env.COMMIT_HASH }} gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }}
+        run: |
+          gcloud storage cp tfplan-${{ env.COMMIT_SHA }} gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/${{ env.COMMIT_SHA }}/${{ matrix.environment }}/tfplan --quiet
+          gcloud storage cp plan.html gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/${{ env.COMMIT_SHA }}/${{ matrix.environment }}/plan.html --quiet
 
   comment-on-pr:
-    needs: [lint, plan]
+    needs: [lint, get-environments, plan]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: write
@@ -183,6 +185,8 @@ jobs:
     steps:
       - name: PR Comment
         uses: actions/github-script@v6
+        env:
+          ENVIRONMENTS: ${{ needs.get-environments.outputs.envs }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -190,6 +194,13 @@ jobs:
             const validateOutcome = "${{ needs.lint.outputs.validateOutcome }}";
             const checkovOutcome = "${{ needs.lint.outputs.checkovOutcome }}";
             const planOutcome = "${{ needs.plan.outputs.planOutcome }}";
+            const environments = JSON.parse(process.env.ENVIRONMENTS).include.map(item => item.environment);
+
+            let planLinks = "";
+            for (const environment of environments) {
+              const planUrl = `https://storage.cloud.google.com/${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/${{ env.COMMIT_SHA }}/${environment}/plan.html`;
+              planLinks += `- [${environment}](${planUrl})\n`;
+            }
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -197,14 +208,17 @@ jobs:
               issue_number: context.issue.number,
             });
 
-            const botComment = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes('Checkov Results'));
-
             const output = `#### Checkov Results 🛡️: \`${checkovOutcome}\`
-            \n#### Terraform Plan Results 🧪: \`${planOutcome}\`
             \n#### Terraform Fmt Check Results 🧹: \`${fmtOutcome}\`
             \n#### Terraform Validate Results 🤖 : \`${validateOutcome}\`
+            \n#### Terraform Plan Results 🧪: \`${planOutcome}\`
+
+            \n#### Review Plan 🗒️:
+            \n\n${planLinks}
             `;
-                             
+
+            const botComment = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes('Checkov Results'));
+               
             if (botComment) {
               github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -220,47 +234,3 @@ jobs:
                 body: output
               })
             }
-
-  apply:
-    needs: [lint, plan]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    strategy:
-      matrix:
-        environment: ${{ fromJSON(needs.get-environments.outputs.matrix) }}
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - name: Authenticate to Google Cloud
-        id: "auth"
-        uses: "google-github-actions/auth@v1"
-        with:
-          service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
-          workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
-
-      - name: Set Terraform Workspace
-        id: set-workspace
-        run: |
-          echo "Workspace: ${{ matrix.environment }}"
-
-          terraform workspace new ${{ matrix.environment }}" || terraform workspace select ${{ matrix.environment }}"
-
-      - name: Download Plan
-        id: upload-plan
-        run: gcloud storage cp gs://${{ env.TERRAFORM_PLAN_BUCKET }}/tf-plan/tfplan-${{ env.COMMIT_HASH }} tfplan-${{ env.COMMIT_HASH }}
-
-      - name: Terraform Apply
-        id: apply
-        run: |
-          terraform apply "tfplan-${{ env.COMMIT_HASH }}"
