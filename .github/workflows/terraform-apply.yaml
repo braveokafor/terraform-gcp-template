@@ -31,7 +31,7 @@ jobs:
     steps:
       - id: set-envs
         run: |
-          OUTPUT=$(echo '${{ env.ENVIRONMENTS }}' | jq -R -c '{include: (split(",") | map({environment: .}))}')
+          OUTPUT=$(echo '${{ env.TERRAFORM_ENVIRONMENTS }}' | jq -R -c '{include: (split(",") | map({environment: .}))}')
 
           echo $OUTPUT
           echo "envs=$OUTPUT" >> $GITHUB_OUTPUT
