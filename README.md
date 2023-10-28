@@ -13,6 +13,29 @@ Terraform GCP Project Template
 ## Usage
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.13 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | ~> 4.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_google"></a> [google](#provider\_google) | ~> 4.0 |
+
+## Inputs
+
+| Name | Description | Type | Required |
+|------|-------------|------|:--------:|
+| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | The ID of the project | `string` | yes |
+| <a name="input_enabled_apis"></a> [enabled\_apis](#input\_enabled\_apis) | Google Cloud API's to enable on the project. | `list(string)` | no |
+
+## Outputs
+
+No outputs.
 <!-- END_TF_DOCS -->
 
 [link_issues]: https://github.com/braveokafor/terraform-gcp-template/issues
