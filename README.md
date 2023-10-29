@@ -31,11 +31,20 @@ Terraform GCP Project Template
 | Name | Description | Type | Required |
 |------|-------------|------|:--------:|
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | The ID of the project | `string` | yes |
+| <a name="input_enable_nat_logs"></a> [enable\_nat\_logs](#input\_enable\_nat\_logs) | Should Cloud NAT logs be enabled | `bool` | no |
+| <a name="input_enable_subnet_flow_logs"></a> [enable\_subnet\_flow\_logs](#input\_enable\_subnet\_flow\_logs) | Should subnet flow logs be enabled | `bool` | no |
 | <a name="input_enabled_apis"></a> [enabled\_apis](#input\_enabled\_apis) | Google Cloud API's to enable on the project. | `list(string)` | no |
+| <a name="input_labels"></a> [labels](#input\_labels) | Common Labels | `map(string)` | no |
+| <a name="input_prefix"></a> [prefix](#input\_prefix) | Prefix to prepend to resource names | `string` | no |
+| <a name="input_region"></a> [region](#input\_region) | Default region for resources | `string` | no |
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_network"></a> [network](#output\_network) | Network name |
+| <a name="output_subnet"></a> [subnet](#output\_subnet) | Subnet name |
+| <a name="output_vpc_connector_subnet"></a> [vpc\_connector\_subnet](#output\_vpc\_connector\_subnet) | VPC connector subnet name |
 <!-- END_TF_DOCS -->
 
 [link_issues]: https://github.com/braveokafor/terraform-gcp-template/issues
