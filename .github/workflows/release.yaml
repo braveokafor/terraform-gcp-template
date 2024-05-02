@@ -17,6 +17,13 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: google-github-actions/release-please-action@v3
+      - name: Confirm README.md is up to date.
+        uses: terraform-docs/gh-actions@v1.1.0
+        with:
+          working-dir: .
+          fail-on-diff: true
+
+      - name: Release Please
+        uses: google-github-actions/release-please-action@v3
         with:
           release-type: terraform-module
