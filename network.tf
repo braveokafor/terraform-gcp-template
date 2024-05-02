@@ -45,8 +45,9 @@ locals {
 # Network/ Subnets
 #------------------------------------------------------------------------------
 module "network" {
+  #checkov:skip=CKV_TF_1: "IGNORE: Ensure Terraform module sources use a commit hash"
   source       = "terraform-google-modules/network/google"
-  version      = "7.5.0"
+  version      = "9.1.0"
   project_id   = var.project_id
   network_name = "${var.prefix}-vpc"
 
@@ -157,4 +158,8 @@ resource "google_service_networking_connection" "private_service_connect" {
   network                 = local.network_self_link
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_service_connect.name]
+
+  depends_on = [
+    google_project_service.enable_apis
+  ]
 }
