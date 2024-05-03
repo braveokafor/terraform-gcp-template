@@ -24,6 +24,7 @@ env:
 
 jobs:
   apply:
+    if: ${{ !contains (github.repository, '/terraform-gcp-template') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -21,6 +21,7 @@ env:
 
 jobs:
   lint:
+    if: ${{ !contains (github.repository, '/terraform-gcp-template') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,6 +63,7 @@ jobs:
           quiet: true
 
   plan:
+    if: ${{ !contains (github.repository, '/terraform-gcp-template') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
