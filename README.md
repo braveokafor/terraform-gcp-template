@@ -1,4 +1,4 @@
-# terraform-gcp-template
+# Terraform GCP Template
 
 Terraform template to bootstrap a baseline project in Google Cloud.
 
