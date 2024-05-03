@@ -31,11 +31,8 @@ do
 done
 
 
-rm -rf .terraform-docs.yml .pre-commit-config.yaml 
+rm -rf .terraform-docs.yml .pre-commit-config.yaml CHANGELOG.md
 rm -rf .github/rename_project.sh .github/workflows/release.yaml .github/workflows/bootstrap-repo.yaml
-
-mv .github/workflows/terraform-plan.yaml.disabled .github/workflows/terraform-plan.yaml
-mv .github/workflows/terraform-apply.yaml.disabled .github/workflows/terraform-apply.yaml
 
 sed -i '/<!-- BEGIN_TEMPLATE_DOCUMENTATION -->/,/<!-- END_TEMPLATE_DOCUMENTATION -->/d' README.md
 sed -i '/<!-- BEGIN_TF_DOCS -->/,/<!-- END_TF_DOCS -->/d' README.md
