@@ -2,12 +2,16 @@ name: Rename project from template
 
 on: [push]
 
-permissions: write-all
+permissions:
+  contents: read
 
 jobs:
   rename-project:
     if: ${{ !contains (github.repository, '/terraform-gcp-template') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -39,7 +43,6 @@ jobs:
           echo "Renaming the project with -a(author) ${{ env.REPOSITORY_OWNER }} -n(name) ${{ env.REPOSITORY_NAME }} -u(urlname) ${{ env.REPOSITORY_URLNAME }}"
 
           .github/bootstrap-repo.sh -a ${{ env.REPOSITORY_OWNER }} -n ${{ env.REPOSITORY_NAME }} -u ${{ env.REPOSITORY_URLNAME }} -d "Terraform GCP project created by ${{ env.REPOSITORY_OWNER }}."
-
 
       - name: Create PR
         if: steps.is-template.outputs.status == 'true'
