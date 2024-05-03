@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.0...v0.1.1) (2024-05-03)
+
+
+### Bug Fixes
+
+* Update repo bootstrap actions ([d7bab1c](https://github.com/braveokafor/terraform-gcp-template/commit/d7bab1c9a7f68342c587afcc3dec3575e86bb773))
+
 ## 0.1.0 (2024-05-03)
 
 
