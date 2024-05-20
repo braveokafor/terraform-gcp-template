@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.2...v0.1.3) (2024-05-20)
+
+
+### Bug Fixes
+
+* updated typos in iam.tf ([c13c676](https://github.com/braveokafor/terraform-gcp-template/commit/c13c676c92ba5e19da41ba77922fbd445f98be06))
+
 ## [0.1.2](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.1...v0.1.2) (2024-05-03)
 
 
