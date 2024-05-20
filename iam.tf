@@ -1,8 +1,8 @@
 locals {
   admin_user_roles = flatten([
-    for user in var.dev_users :
+    for user in var.admin_users :
     [
-      for role in var.dev_user_roles :
+      for role in var.admin_user_roles :
       {
         principal = user
         role      = role
@@ -22,9 +22,9 @@ locals {
   ])
 
   basic_user_roles = flatten([
-    for user in var.dev_users :
+    for user in var.basic_users :
     [
-      for role in var.dev_user_roles :
+      for role in var.basic_user_roles :
       {
         principal = user
         role      = role
