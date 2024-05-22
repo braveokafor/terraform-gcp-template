@@ -35,6 +35,7 @@ variable "enabled_apis" {
     "vpcaccess.googleapis.com",
     "servicenetworking.googleapis.com",
     "billingbudgets.googleapis.com",
+    "monitoring.googleapis.com",
   ]
 }
 
