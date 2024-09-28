@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.3...v0.2.0) (2024-09-28)
+
+
+### Features
+
+* Add Makefile ([41c3fc7](https://github.com/braveokafor/terraform-gcp-template/commit/41c3fc7046b3008ccf9c4e50cdc1a5074c14adf9))
+
 ## [0.1.3](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.2...v0.1.3) (2024-05-20)
 
 
