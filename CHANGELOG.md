@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/braveokafor/terraform-gcp-template/compare/v0.2.0...v0.2.1) (2024-10-04)
+
+
+### Bug Fixes
+
+* fixed errors in iam user creation ([d1a3656](https://github.com/braveokafor/terraform-gcp-template/commit/d1a3656e410b5fba3efdf19f1ba5264e62519a62))
+
 ## [0.2.0](https://github.com/braveokafor/terraform-gcp-template/compare/v0.1.3...v0.2.0) (2024-09-28)
 
 
