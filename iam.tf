@@ -4,8 +4,8 @@ locals {
     [
       for role in var.admin_user_roles :
       {
-        principal = user
-        role      = role
+        user = user
+        role = role
       }
     ]
   ])
@@ -15,8 +15,8 @@ locals {
     [
       for role in var.dev_user_roles :
       {
-        principal = user
-        role      = role
+        user = user
+        role = role
       }
     ]
   ])
@@ -26,8 +26,8 @@ locals {
     [
       for role in var.basic_user_roles :
       {
-        principal = user
-        role      = role
+        user = user
+        role = role
       }
     ]
   ])
@@ -38,7 +38,7 @@ resource "google_project_iam_member" "admin_users" {
 
   project = var.project_id
   role    = each.value.role
-  member  = each.value.user
+  member  = "user:${each.value.user}"
 }
 
 resource "google_project_iam_member" "dev_users" {
@@ -46,7 +46,7 @@ resource "google_project_iam_member" "dev_users" {
 
   project = var.project_id
   role    = each.value.role
-  member  = each.value.user
+  member  = "user:${each.value.user}"
 }
 
 resource "google_project_iam_member" "basic_users" {
@@ -54,5 +54,5 @@ resource "google_project_iam_member" "basic_users" {
 
   project = var.project_id
   role    = each.value.role
-  member  = each.value.user
+  member  = "user:${each.value.user}"
 }
