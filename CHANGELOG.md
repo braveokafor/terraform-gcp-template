@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2](https://github.com/braveokafor/terraform-gcp-template/compare/v0.2.1...v0.2.2) (2026-05-02)
+
+
+### Bug Fixes
+
+* debug release lint action ([2e1a21b](https://github.com/braveokafor/terraform-gcp-template/commit/2e1a21be2db7debb5c2ac77d29f0d2b9f659d9be))
+* debug release lint action ([f5110dd](https://github.com/braveokafor/terraform-gcp-template/commit/f5110dda13e8ae1620d65b1fc1dfd68326b8eac0))
+* debug release lint action ([21e7acc](https://github.com/braveokafor/terraform-gcp-template/commit/21e7acc2754fb7c6109b42a27f70d262a4ce82cd))
+* debug release lint action ([4cdb6bd](https://github.com/braveokafor/terraform-gcp-template/commit/4cdb6bdda07b0b27a5128c551a54a66d9c3568d8))
+
 ## [0.2.1](https://github.com/braveokafor/terraform-gcp-template/compare/v0.2.0...v0.2.1) (2024-10-04)
 
 
