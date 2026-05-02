@@ -107,7 +107,7 @@ variable "admin_users" {
 
 variable "dev_users" {
   type        = list(string)
-  description = "Email address of dev (developer) users"
+  description = "Email address of dev users"
   default     = []
 }
 
@@ -125,7 +125,7 @@ variable "admin_user_roles" {
 
 variable "dev_user_roles" {
   type        = list(string)
-  description = "Dev (developer) user roles"
+  description = "Dev user roles"
   default     = ["roles/editor"]
 }
 
