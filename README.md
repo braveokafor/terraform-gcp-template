@@ -66,8 +66,8 @@ Terraform template to bootstrap a baseline project in Google Cloud.
 | <a name="input_billing_account_id"></a> [billing\_account\_id](#input\_billing\_account\_id) | The ID of the Billing Account | `string` | no |
 | <a name="input_budget_alert_thresholds"></a> [budget\_alert\_thresholds](#input\_budget\_alert\_thresholds) | What points should billing alerts be sent | `list(number)` | no |
 | <a name="input_budget_currency"></a> [budget\_currency](#input\_budget\_currency) | The 3-letter currency code as defined in ISO 4217 | `string` | no |
-| <a name="input_dev_user_roles"></a> [dev\_user\_roles](#input\_dev\_user\_roles) | Dev (developer) user roles | `list(string)` | no |
-| <a name="input_dev_users"></a> [dev\_users](#input\_dev\_users) | Email address of dev (developer) users | `list(string)` | no |
+| <a name="input_dev_user_roles"></a> [dev\_user\_roles](#input\_dev\_user\_roles) | Dev user roles | `list(string)` | no |
+| <a name="input_dev_users"></a> [dev\_users](#input\_dev\_users) | Email address of dev users | `list(string)` | no |
 | <a name="input_enable_budget"></a> [enable\_budget](#input\_enable\_budget) | Create a budget | `bool` | no |
 | <a name="input_enable_firewall_ingress_logs"></a> [enable\_firewall\_ingress\_logs](#input\_enable\_firewall\_ingress\_logs) | Should firewall logs be enabled for ingress traffic | `bool` | no |
 | <a name="input_enable_nat_logs"></a> [enable\_nat\_logs](#input\_enable\_nat\_logs) | Should Cloud NAT logs be enabled | `bool` | no |
