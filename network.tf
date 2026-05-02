@@ -35,8 +35,10 @@ locals {
       name              = "${var.prefix}-vpc-egress-inet"
       description       = "route through IGW to access internet"
       destination_range = "0.0.0.0/0"
-      tags              = "egress-inet"
       next_hop_internet = "true"
+      tags = [
+        "egress-inet",
+      ]
     },
   ]
 }
@@ -47,7 +49,7 @@ locals {
 module "network" {
   #checkov:skip=CKV_TF_1: "IGNORE: Ensure Terraform module sources use a commit hash"
   source       = "terraform-google-modules/network/google"
-  version      = "9.2.0"
+  version      = "18.0.0"
   project_id   = var.project_id
   network_name = "${var.prefix}-vpc"
 

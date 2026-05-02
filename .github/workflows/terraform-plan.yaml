@@ -12,8 +12,6 @@ permissions:
   id-token: write
 
 env:
-  TERRAFORM_VERSION: 1.7.0
-  GCLOUD_VERSION: ">= 440.0.0"
   GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
   GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
   TERRAFORM_PLAN_BUCKET: ${{ secrets.TERRAFORM_PLAN_BUCKET }} # GCS bucket to store/ retrieve plan files.
@@ -33,14 +31,13 @@ jobs:
       checkovOutcome: ${{ steps.checkov.outcome }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v4.0.0
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
 
       - name: Terraform Format Check
@@ -57,7 +54,7 @@ jobs:
 
       - name: Run Checkov
         id: checkov
-        uses: bridgecrewio/checkov-action@v12.2500.0
+        uses: bridgecrewio/checkov-action@v12.1347.0
         continue-on-error: true
         with:
           quiet: true
@@ -73,27 +70,24 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v4.0.0
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
 
       - name: Authenticate to Google Cloud
         id: "auth"
-        uses: "google-github-actions/auth@v1"
+        uses: "google-github-actions/auth@v3.0.0"
         with:
           service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
           workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
 
       - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v1"
-        with:
-          version: ${{ env.GCLOUD_VERSION }}
+        uses: "google-github-actions/setup-gcloud@v3.0.1"
 
       - name: Terraform Init
         id: init
@@ -116,7 +110,7 @@ jobs:
       id-token: write
     steps:
       - name: PR Comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -138,7 +132,7 @@ jobs:
             `;
 
             const botComment = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes('Checkov Results'));
-               
+
             if (botComment) {
               github.rest.issues.updateComment({
                 owner: context.repo.owner,

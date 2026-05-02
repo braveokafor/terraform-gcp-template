@@ -19,7 +19,7 @@ Terraform template to bootstrap a baseline project in Google Cloud.
 | CI/CD | GitHub Actions to `lint`, `plan`, and `apply` to Google Cloud | `.github/workflows/terraform-apply.yaml`, `.github/workflows/terraform-plan.yaml` |
 
 ## Usage
-> **DO NOT FORK** this is meant to be used from **[Use this template](https://github.com/braveokafor/terraform-gcp-template/generate)** feature.
+> **YOU DON'T NEED TOO FORK TO USE** this is meant to be used from **[Use this template](https://github.com/braveokafor/terraform-gcp-template/generate)** feature.
 
 1. Click on **[Use this template](https://github.com/braveokafor/terraform-gcp-template/generate)**
 3. Give a name to your repo
@@ -43,20 +43,20 @@ Terraform template to bootstrap a baseline project in Google Cloud.
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.13 |
-| <a name="requirement_google"></a> [google](#requirement\_google) | ~> 6.0 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | ~> 7.0 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | ~> 6.0 |
+| ---- | ------- |
+| <a name="provider_google"></a> [google](#provider\_google) | ~> 7.0 |
 
 ## Inputs
 
 | Name | Description | Type | Required |
-|------|-------------|------|:--------:|
+| ---- | ----------- | ---- | :------: |
 | <a name="input_notification_emails"></a> [notification\_emails](#input\_notification\_emails) | Email addresses to send notifications to | `list(string)` | yes |
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | The ID of the project | `string` | yes |
 | <a name="input_admin_user_roles"></a> [admin\_user\_roles](#input\_admin\_user\_roles) | Admin user roles | `list(string)` | no |
@@ -81,7 +81,7 @@ Terraform template to bootstrap a baseline project in Google Cloud.
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_network"></a> [network](#output\_network) | Network name |
 | <a name="output_subnet"></a> [subnet](#output\_subnet) | Subnet name |
 | <a name="output_vpc_connector_subnet"></a> [vpc\_connector\_subnet](#output\_vpc\_connector\_subnet) | VPC connector subnet name |
